@@ -1,0 +1,20 @@
+# Compiled files
+chinese-calendar
+.opencode
+
+# Build directory
+build/
+
+# Object files
+*.o
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
