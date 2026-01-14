@@ -48,7 +48,7 @@ void ui_draw_help_panel(const Rect *rect) {
     if (y + 2 <= max_y)
         mvprintw(y + 2, x, "显示: m 切换日历");
     if (y + 3 <= max_y)
-        mvprintw(y + 3, x, "      d 切换神仙 p 翻页动画");
+        mvprintw(y + 3, x, "      d 切换神仙");
     if (y + 4 <= max_y)
         mvprintw(y + 4, x, "退出: q 或 Esc");
 }

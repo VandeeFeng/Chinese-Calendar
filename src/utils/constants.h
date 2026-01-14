@@ -16,10 +16,6 @@
 #define MIN_CENTER_PANEL_WIDTH 20
 #define OUTER_BORDER_PADDING 2
 
-/* Animation settings */
-#define PAGE_TURN_FRAMES 8
-#define PAGE_TURN_DELAY_US 30000
-
 /* Color pairs */
 #define COLOR_PAIR_RED 1
 #define COLOR_PAIR_GREEN 2

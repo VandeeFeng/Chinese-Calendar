@@ -24,7 +24,6 @@ int date_to_weekday(const Date *date);
 int date_to_day_of_year(const Date *date);
 void date_to_today(Date *date);
 
-void animation_page_turn(Date *date, int direction);
 int handle_input(int ch, Date *date, int *mode, int *needs_redraw);
 
 #endif

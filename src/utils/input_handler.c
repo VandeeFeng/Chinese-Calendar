@@ -9,7 +9,7 @@ int handle_input(int ch, Date *date, int *mode, int *needs_redraw) {
 
     switch (ch) {
     case 'h':
-        animation_page_turn(date, -1);
+        date_add_days(date, -1);
         *needs_redraw = 1;
         break;
     case 'j':
@@ -21,7 +21,7 @@ int handle_input(int ch, Date *date, int *mode, int *needs_redraw) {
         *needs_redraw = 1;
         break;
     case 'l':
-        animation_page_turn(date, 1);
+        date_add_days(date, 1);
         *needs_redraw = 1;
         break;
     case 'm':
@@ -29,10 +29,6 @@ int handle_input(int ch, Date *date, int *mode, int *needs_redraw) {
         *needs_redraw = 1;
         break;
     case 'd':
-        break;
-    case 'p':
-        animation_page_turn(date, 1);
-        *needs_redraw = 1;
         break;
     case KEY_CTRL('f'):
         date_add_months(date, 1);
