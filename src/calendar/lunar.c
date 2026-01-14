@@ -2,6 +2,7 @@
 #include "calendar/lunar.h"
 #include "calendar/lunar_data.h"
 #include "utils/constants.h"
+#include <math.h>
 
 const char *ganzhi_year[] = {
     "甲子", "乙丑", "丙寅", "丁卯", "戊辰", "己巳", "庚午", "辛未", "壬申", "癸酉",
@@ -12,17 +13,17 @@ const char *ganzhi_year[] = {
     "甲寅", "乙卯", "丙辰", "丁巳", "戊午", "己未", "庚申", "辛酉", "壬戌", "癸亥"
 };
 
-const char *ganzhi_day[] = {
-    "甲子", "乙丑", "丙寅", "丁卯", "戊辰", "己巳", "庚午", "辛未", "壬申", "癸酉",
-    "甲戌", "乙亥", "丙子", "丁丑", "戊寅", "己卯", "庚辰", "辛巳", "壬午", "癸未",
-    "甲申", "乙酉", "丙戌", "丁亥", "戊子", "己丑", "庚寅", "辛卯", "壬辰", "癸巳",
-    "甲午", "乙未", "丙申", "丁酉", "戊戌", "己亥", "庚子", "辛丑", "壬寅", "癸卯",
-    "甲辰", "乙巳", "丙午", "丁未", "戊申", "己酉", "庚戌", "辛亥", "壬子", "癸丑",
-    "甲寅", "乙卯", "丙辰", "丁巳", "戊午", "己未", "庚申", "辛酉", "壬戌", "癸亥"
-};
+const char **ganzhi_day = ganzhi_year;
 
 static const char *zodiac_animal[] = {
     "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"
+};
+
+static const char *solar_term_names[] = {
+    "冬至", "小寒", "大寒", "立春", "雨水", "惊蛰",
+    "春分", "清明", "谷雨", "立夏", "小满", "芒种",
+    "夏至", "小暑", "大暑", "立秋", "处暑", "白露",
+    "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"
 };
 
 static const int solar_month_days[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -134,6 +135,7 @@ int solar_to_lunar(const Date *solar, LunarDate *lunar) {
     lunar_get_zodiac(lunar->year, lunar->zodiac);
     lunar_get_ganzhi_year(lunar->year, lunar->ganzhi_year);
     lunar_get_ganzhi_day(solar, lunar->ganzhi_day);
+    lunar_get_solar_term(solar, lunar);
 
     return 0;
 }
@@ -147,17 +149,13 @@ int lunar_to_solar(LunarDate *lunar, Date *solar) {
 void lunar_get_zodiac(int year, char *zodiac) {
     int offset = (year - 4) % 12;
     if (offset < 0) offset += 12;
-
-    strncpy(zodiac, zodiac_animal[offset], ZODIAC_SIZE - 1);
-    zodiac[ZODIAC_SIZE - 1] = '\0';
+    snprintf(zodiac, ZODIAC_SIZE, "%s", zodiac_animal[offset]);
 }
 
 void lunar_get_ganzhi_year(int year, char *ganzhi) {
     int offset = (year - 4) % 60;
     if (offset < 0) offset += 60;
-
-    strncpy(ganzhi, ganzhi_year[offset], GANZHI_SIZE - 1);
-    ganzhi[GANZHI_SIZE - 1] = '\0';
+    snprintf(ganzhi, GANZHI_SIZE, "%s", ganzhi_year[offset]);
 }
 
 void lunar_get_ganzhi_day(const Date *solar, char *ganzhi) {
@@ -176,8 +174,42 @@ void lunar_get_ganzhi_day(const Date *solar, char *ganzhi) {
 
     int offset = days_diff % 60;
     if (offset < 0) offset += 60;
+    snprintf(ganzhi, GANZHI_SIZE, "%s", ganzhi_day[offset]);
+}
 
-    strncpy(ganzhi, ganzhi_day[offset], GANZHI_SIZE - 1);
-    ganzhi[GANZHI_SIZE - 1] = '\0';
+static int days_from_1900_01_01(int year, int month, int day) {
+    int days = 0;
+
+    for (int y = 1900; y < year; y++) {
+        days += is_solar_leap_year(y) ? 366 : 365;
+    }
+
+    for (int m = 1; m < month; m++) {
+        days += solar_days_in_month(year, m);
+    }
+
+    days += day;
+
+    return days;
+}
+
+void lunar_get_solar_term(const Date *solar, LunarDate *lunar) {
+    lunar->solar_term = -1;
+    lunar->solar_term_name[0] = '\0';
+
+    int current_days = days_from_1900_01_01(solar->year, solar->month, solar->day);
+    int y = solar->year - 1900;
+
+    for (int i = 0; i < SOLAR_TERM_COUNT; i++) {
+        int formula_index = (i == 0) ? 23 : i - 1;
+        double F = 365.242 * y + 6.2 + 15.22 * formula_index - 1.9 * sin(0.262 * formula_index);
+        int solar_term_days = (int)F;
+
+        if (solar_term_days == current_days) {
+            lunar->solar_term = i;
+            snprintf(lunar->solar_term_name, SOLAR_TERM_SIZE, "%s", solar_term_names[i]);
+            return;
+        }
+    }
 }
 

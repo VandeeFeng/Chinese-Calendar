@@ -25,13 +25,9 @@ void draw_box(int y, int x, int height, int width) {
 }
 
 void ui_draw_label(int y, int x, const char *text, int color_pair) {
-    if (color_pair > 0) {
-        attron(COLOR_PAIR(color_pair));
-        mvprintw(y, x, "%s", text);
-        attroff(COLOR_PAIR(color_pair));
-    } else {
-        mvprintw(y, x, "%s", text);
-    }
+    if (color_pair > 0) attron(COLOR_PAIR(color_pair));
+    mvprintw(y, x, "%s", text);
+    if (color_pair > 0) attroff(COLOR_PAIR(color_pair));
 }
 
 void ui_draw_header(const Rect *rect) {
@@ -111,31 +107,17 @@ void draw_calendar_grid(int y, int x, const Date *date, int max_y) {
     Date first_day = {date->year, date->month, 1};
     const int first_weekday = date_to_weekday(&first_day);
     const int days_in_month = date_days_in_month(date);
-
-    int day_count = 0;
     const int row = y + 2;
 
-    for (int i = 0; i < first_weekday && row <= max_y; i++) {
-        mvprintw(row, x + i * 3, "  ");
-    }
-
     for (int day = 1; day <= days_in_month; day++) {
-        const int col = x + ((first_weekday + day_count) % 7) * 3;
-        const int row_pos = row + (first_weekday + day_count) / 7;
+        const int col = x + ((first_weekday + day - 1) % 7) * 3;
+        const int row_pos = row + (first_weekday + day - 1) / 7;
 
-        if (row_pos > max_y) {
-            break;
-        }
+        if (row_pos > max_y) break;
 
-        if (day == date->day) {
-            attron(A_REVERSE);
-            mvprintw(row_pos, col, "%2d", day);
-            attroff(A_REVERSE);
-        } else {
-            mvprintw(row_pos, col, "%2d", day);
-        }
-
-        day_count++;
+        if (day == date->day) attron(A_REVERSE);
+        mvprintw(row_pos, col, "%2d", day);
+        if (day == date->day) attroff(A_REVERSE);
     }
 }
 
@@ -143,56 +125,52 @@ void ui_draw_right_panel(const Rect *rect, const Date *date __attribute__((unuse
                          const Almanac *alm, int mode __attribute__((unused))) {
     const int y = rect->y + 1;
     const int x = rect->x + 2;
-
     static const char *lunar_months[] = {"", "正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "腊"};
     const int month_idx = (lunar->month >= 1 && lunar->month <= 12) ? lunar->month : 0;
 
     mvprintw(y, x, "农历: %s年%s%s月%d日",
              lunar->ganzhi_year, lunar->is_leap ? "闰" : "",
              lunar_months[month_idx], lunar->day);
-
     mvprintw(y + 1, x, "生肖: %s", lunar->zodiac);
     mvprintw(y + 2, x, "干支: %s", lunar->ganzhi_day);
 
-    BorderConfig yi_config = {
-        .y = y + 4,
-        .x = x - 2,
-        .height = 3,
-        .width = 35,
-        .style = BORDER_STYLE_DECORATED,
-        .color_pair = 0,
-        .padding = 1
-    };
-    chinese_border_draw(&yi_config);
-    attron(COLOR_PAIR(COLOR_PAIR_GREEN));
-    mvprintw(y + 4, x + 16, "宜");
-    attroff(COLOR_PAIR(COLOR_PAIR_GREEN));
-    mvprintw(y + 5, x, " %s", alm->yi);
+    if (lunar->solar_term >= 0) {
+        attron(COLOR_PAIR(COLOR_PAIR_YELLOW));
+        mvprintw(y + 3, x, "节气: %s", lunar->solar_term_name);
+        attroff(COLOR_PAIR(COLOR_PAIR_YELLOW));
+    }
 
-    BorderConfig ji_config = {
-        .y = y + 8,
-        .x = x - 2,
-        .height = 3,
-        .width = 35,
+    BorderConfig border = {
         .style = BORDER_STYLE_DECORATED,
         .color_pair = 0,
         .padding = 1
     };
-    chinese_border_draw(&ji_config);
+
+    border.y = y + 5;
+    border.x = x - 2;
+    border.height = 3;
+    border.width = 35;
+    chinese_border_draw(&border);
+    attron(COLOR_PAIR(COLOR_PAIR_GREEN));
+    mvprintw(y + 5, x + 16, "宜");
+    attroff(COLOR_PAIR(COLOR_PAIR_GREEN));
+    mvprintw(y + 6, x, " %s", alm->yi);
+
+    border.y = y + 9;
+    chinese_border_draw(&border);
     attron(COLOR_PAIR(COLOR_PAIR_RED));
-    mvprintw(y + 8, x + 16, "忌");
+    mvprintw(y + 9, x + 16, "忌");
     attroff(COLOR_PAIR(COLOR_PAIR_RED));
-    mvprintw(y + 9, x, " %s", alm->ji);
+    mvprintw(y + 10, x, " %s", alm->ji);
 
     attron(COLOR_PAIR(COLOR_PAIR_YELLOW));
-    mvprintw(y + 11, x, "冲煞: %s", alm->chong);
+    mvprintw(y + 12, x, "冲煞: %s", alm->chong);
     attroff(COLOR_PAIR(COLOR_PAIR_YELLOW));
-    mvprintw(y + 12, x, "财神:%s", alm->chaishen);
-    mvprintw(y + 13, x, "喜神:%s  福神:%s", alm->xishen, alm->fushen);
-
-    mvprintw(y + 14, x, "吉神: %s", alm->jishen);
-    mvprintw(y + 15, x, "凶煞: %s", alm->xiongsha);
-    mvprintw(y + 16, x, "彭祖: %s", alm->pengzu);
+    mvprintw(y + 13, x, "财神:%s", alm->chaishen);
+    mvprintw(y + 14, x, "喜神:%s  福神:%s", alm->xishen, alm->fushen);
+    mvprintw(y + 15, x, "吉神: %s", alm->jishen);
+    mvprintw(y + 16, x, "凶煞: %s", alm->xiongsha);
+    mvprintw(y + 17, x, "彭祖: %s", alm->pengzu);
 }
 
 void ui_draw_calendar_panel(const Rect *rect, const Date *date) {

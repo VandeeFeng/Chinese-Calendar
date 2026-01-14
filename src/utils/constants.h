@@ -30,6 +30,7 @@
 #define ALMANAC_SHORT_SIZE 32
 #define GANZHI_SIZE 10
 #define ZODIAC_SIZE 10
+#define SOLAR_TERM_SIZE 10
 
 /* Array sizes */
 #define GANZHI_ARRAY_SIZE 60
@@ -39,6 +40,7 @@
 #define JISHEN_COUNT 20
 #define XIONGSHA_COUNT 15
 #define DIRECTIONS_COUNT 8
+#define SOLAR_TERM_COUNT 24
 
 /* Lunar calendar data bit masks */
 #define LUNAR_INFO_LEAP_MONTH_MASK 0xF
