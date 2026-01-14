@@ -24,8 +24,6 @@ int main(void) {
     curs_set(0);
     timeout(300);
 
-    Date date = {2026, 1, 11};
-
     AnimationState anim_state;
     deity_animation_init(&anim_state, 4, 300);
 

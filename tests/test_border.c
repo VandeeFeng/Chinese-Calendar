@@ -37,27 +37,27 @@ int main(void) {
 
     // Style 1: Simple (双线框)
     mvprintw(y, x, "1. SIMPLE - 双线框");
-    BorderConfig simple = {y + 1, x, height, width, BORDER_STYLE_SIMPLE, 0};
+    BorderConfig simple = {y + 1, x, height, width, BORDER_STYLE_SIMPLE, 0, 0};
     chinese_border_draw(&simple);
 
     // Style 2: Cloud (祥云纹)
     mvprintw(y + height + 2, x, "2. CLOUD - 祥云纹");
-    BorderConfig cloud = {y + height + 3, x, height, width, BORDER_STYLE_CLOUD, COLOR_RED};
+    BorderConfig cloud = {y + height + 3, x, height, width, BORDER_STYLE_CLOUD, COLOR_RED, 0};
     chinese_border_draw(&cloud);
 
     // Style 3: Meihua (梅花纹)
     mvprintw(y + height * 2 + 4, x, "3. MEIHUA - 梅花纹");
-    BorderConfig meihua = {y + height * 2 + 5, x, height, width, BORDER_STYLE_MEIHUA, COLOR_YELLOW};
+    BorderConfig meihua = {y + height * 2 + 5, x, height, width, BORDER_STYLE_MEIHUA, COLOR_YELLOW, 0};
     chinese_border_draw(&meihua);
 
     // Style 4: Mosaic (镶嵌式)
     mvprintw(y + height * 3 + 6, x, "4. MOSAIC - 镶嵌式");
-    BorderConfig mosaic = {y + height * 3 + 7, x, height, width, BORDER_STYLE_MOSAIC, COLOR_BLUE};
+    BorderConfig mosaic = {y + height * 3 + 7, x, height, width, BORDER_STYLE_MOSAIC, COLOR_BLUE, 0};
     chinese_border_draw(&mosaic);
 
     // Style 5: Decorated (混合装饰 - 推荐)
     mvprintw(y + height * 4 + 8, x, "5. DECORATED - 混合装饰 (推荐)");
-    BorderConfig decorated = {y + height * 4 + 9, x, height, width, BORDER_STYLE_DECORATED, COLOR_CYAN};
+    BorderConfig decorated = {y + height * 4 + 9, x, height, width, BORDER_STYLE_DECORATED, COLOR_CYAN, 0};
     chinese_border_draw(&decorated);
 
     // Draw separator line

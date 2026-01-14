@@ -25,105 +25,69 @@ static const char *zodiac_animal[] = {
     "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"
 };
 
-static const int month_add[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+static const int solar_month_days[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-static int get_lunar_month_days(unsigned int lunar_info, int month_index) {
-    if (month_index < 1 || month_index > LUNAR_MAX_MONTHS) {
+static int is_solar_leap_year(int year) {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+static int solar_days_in_month(int year, int month) {
+    if (month == 2 && is_solar_leap_year(year)) {
+        return 29;
+    }
+    return solar_month_days[month];
+}
+
+static unsigned int get_lunar_info(int year) {
+    if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) {
+        return 0;
+    }
+    return lunar_data[year - LUNAR_MIN_YEAR];
+}
+
+static int lunar_leap_month(int year) {
+    return get_lunar_info(year) & LUNAR_INFO_LEAP_MONTH_MASK;
+}
+
+static int lunar_leap_month_days(int year) {
+    unsigned int info = get_lunar_info(year);
+    if (lunar_leap_month(year) == 0) {
+        return 0;
+    }
+    return (info & LUNAR_INFO_LEAP_MONTH_DAY_BIT) ? LUNAR_DAYS_30 : LUNAR_DAYS_29;
+}
+
+static int lunar_month_days(int year, int month) {
+    unsigned int info = get_lunar_info(year);
+    if ((info & (LUNAR_INFO_LEAP_MONTH_DAY_BIT >> month)) == 0) {
         return LUNAR_DAYS_29;
     }
-    return (lunar_info & (LUNAR_INFO_MONTH_DAY_MASK >> (month_index - 1))) ? LUNAR_DAYS_30 : LUNAR_DAYS_29;
+    return LUNAR_DAYS_30;
 }
 
-static int get_leap_month(unsigned int lunar_info) {
-    return (lunar_info >> LUNAR_INFO_LEAP_MONTH_SHIFT) & LUNAR_INFO_LEAP_MONTH_MASK;
+static int lunar_total_days(int year) {
+    int total = 0;
+    for (int i = 1; i <= LUNAR_MONTHS_PER_YEAR; i++) {
+        total += lunar_month_days(year, i);
+    }
+    total += lunar_leap_month_days(year);
+    return total;
 }
 
-static int calculate_spring_day_offset(unsigned int lunar_info) {
-    const int spring_month = lunar_info & LUNAR_INFO_SPRING_MONTH_MASK;
-    const int spring_day = (lunar_info >> 4) & LUNAR_INFO_SPRING_DAY_MASK;
-    return (spring_month == 1) ? spring_day - 1 : SOLAR_DAYS_IN_JANUARY + spring_day - 1;
-}
+static int days_from_1900_1_31(int year, int month, int day) {
+    int days = 0;
 
-static int calculate_solar_day_offset(const Date *solar) {
-    int offset = month_add[solar->month - 1] + solar->day - 1;
-
-    if (date_is_leap_year(solar->year) && solar->month > 2) {
-        offset++;
+    for (int m = 1; m < month; m++) {
+        days += solar_days_in_month(year, m);
     }
 
-    return offset;
-}
+    days += (year - 1900) * 365 + (year - 1900) / 4 + day - 31;
 
-static void calculate_after_spring(const Date *solar, int sun_ny, LunarDate *lunar) {
-    const int year_index = solar->year - LUNAR_MIN_YEAR;
-    const unsigned int lunar_info = lunar_data[year_index];
-    const int leap_month = get_leap_month(lunar_info);
-
-    lunar->month = 1;
-    int month_index = 1;
-    int leap_flag = 0;
-
-    int days_in_month = get_lunar_month_days(lunar_info, month_index);
-
-    while (sun_ny >= days_in_month) {
-        sun_ny -= days_in_month;
-        month_index++;
-
-        if (month_index > LUNAR_MAX_MONTHS) {
-            return;
-        }
-
-        if (lunar->month == leap_month) {
-            leap_flag = ~leap_flag;
-            if (leap_flag == 0) lunar->month++;
-        } else {
-            lunar->month++;
-        }
-
-        days_in_month = get_lunar_month_days(lunar_info, month_index);
+    if (is_solar_leap_year(year) && month != 12 && day != 31) {
+        days -= 1;
     }
 
-    lunar->day = sun_ny + 1;
-    lunar->is_leap = (lunar->month == leap_month && leap_flag) ? 1 : 0;
-
-    if (lunar->month > LUNAR_MONTHS_PER_YEAR) {
-        lunar->month -= LUNAR_MONTHS_PER_YEAR;
-    }
-}
-
-static void calculate_before_spring(int spring_ny, LunarDate *lunar) {
-    lunar->year--;
-
-    if (lunar->year < LUNAR_MIN_YEAR) {
-        return;
-    }
-
-    const unsigned int prev_lunar_info = lunar_data[lunar->year - LUNAR_MIN_YEAR];
-    const int leap_month = get_leap_month(prev_lunar_info);
-
-    lunar->month = 12;
-    int month_index = (leap_month == 0) ? 12 : LUNAR_MAX_MONTHS;
-    int leap_flag = 0;
-
-    int days_in_month = get_lunar_month_days(prev_lunar_info, month_index);
-
-    while (spring_ny > days_in_month) {
-        spring_ny -= days_in_month;
-        month_index--;
-
-        if (month_index < 1) {
-            return;
-        }
-
-        if (leap_flag == 0) lunar->month--;
-
-        if (lunar->month == leap_month) leap_flag = ~leap_flag;
-
-        days_in_month = get_lunar_month_days(prev_lunar_info, month_index);
-    }
-
-    lunar->day = days_in_month - spring_ny + 1;
-    lunar->is_leap = (lunar->month == leap_month && leap_flag) ? 1 : 0;
+    return days;
 }
 
 int solar_to_lunar(const Date *solar, LunarDate *lunar) {
@@ -131,16 +95,40 @@ int solar_to_lunar(const Date *solar, LunarDate *lunar) {
         return -1;
     }
 
-    lunar->year = solar->year;
+    int all_days = days_from_1900_1_31(solar->year, solar->month, solar->day);
+    int year;
+    int leap_month;
+    int is_leap = 0;
+    int days_in_month;
 
-    const unsigned int lunar_info = lunar_data[lunar->year - LUNAR_MIN_YEAR];
-    const int spring_ny = calculate_spring_day_offset(lunar_info);
-    const int sun_ny = calculate_solar_day_offset(solar);
+    for (year = 1900; all_days >= lunar_total_days(year); year++) {
+        all_days -= lunar_total_days(year);
+    }
 
-    if (sun_ny >= spring_ny) {
-        calculate_after_spring(solar, sun_ny - spring_ny, lunar);
-    } else {
-        calculate_before_spring(spring_ny - sun_ny, lunar);
+    lunar->year = year;
+    leap_month = lunar_leap_month(year);
+
+    for (int month = 1; month <= LUNAR_MONTHS_PER_YEAR; month++) {
+        if (leap_month > 0 && month == (leap_month + 1) && !is_leap) {
+            month--;
+            is_leap = 1;
+            days_in_month = lunar_leap_month_days(year);
+        } else {
+            days_in_month = lunar_month_days(year, month);
+        }
+
+        if (is_leap && month == leap_month + 1) {
+            is_leap = 0;
+        }
+
+        if (all_days < days_in_month) {
+            lunar->month = month;
+            lunar->day = all_days + 1;
+            lunar->is_leap = (leap_month > 0 && month == leap_month && is_leap) ? 1 : 0;
+            break;
+        }
+
+        all_days -= days_in_month;
     }
 
     lunar_get_zodiac(lunar->year, lunar->zodiac);
@@ -150,7 +138,9 @@ int solar_to_lunar(const Date *solar, LunarDate *lunar) {
     return 0;
 }
 
-int lunar_to_solar(LunarDate *lunar __attribute__((unused)), Date *solar __attribute__((unused))) {
+int lunar_to_solar(LunarDate *lunar, Date *solar) {
+    (void)lunar;
+    (void)solar;
     return 0;
 }
 
@@ -170,27 +160,19 @@ void lunar_get_ganzhi_year(int year, char *ganzhi) {
     ganzhi[GANZHI_SIZE - 1] = '\0';
 }
 
-void lunar_get_ganzhi_month(int year, int month, int leap __attribute__((unused)), char *ganzhi) {
-    int year_offset = (year - 4) % 60;
-    if (year_offset < 0) year_offset += 60;
-
-    int month_idx = month - 1;
-    if (month_idx < 0) month_idx += 12;
-
-    const int ganzhi_month_idx = (year_offset * 12 + month_idx) % 60;
-    strncpy(ganzhi, ganzhi_year[ganzhi_month_idx], GANZHI_SIZE - 1);
-    ganzhi[GANZHI_SIZE - 1] = '\0';
-}
-
 void lunar_get_ganzhi_day(const Date *solar, char *ganzhi) {
     const Date base_date = {1900, 1, 31};
     long days_diff = 0;
 
     for (int y = base_date.year; y < solar->year; y++) {
-        days_diff += ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)) ? 366 : 365;
+        days_diff += is_solar_leap_year(y) ? 366 : 365;
     }
 
-    days_diff += date_to_day_of_year(solar) - 31;
+    for (int m = 1; m < solar->month; m++) {
+        days_diff += solar_days_in_month(solar->year, m);
+    }
+
+    days_diff += solar->day - base_date.day;
 
     int offset = days_diff % 60;
     if (offset < 0) offset += 60;
@@ -199,38 +181,3 @@ void lunar_get_ganzhi_day(const Date *solar, char *ganzhi) {
     ganzhi[GANZHI_SIZE - 1] = '\0';
 }
 
-int lunar_get_leap_month(int year) {
-    if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return 0;
-    const int year_index = year - LUNAR_MIN_YEAR;
-    return (lunar_data[year_index] >> LUNAR_INFO_LEAP_MONTH_SHIFT) & LUNAR_INFO_LEAP_MONTH_MASK;
-}
-
-int lunar_days_in_month(int year, int month, int leap) {
-    if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return 0;
-    if (month < 1 || month > LUNAR_MONTHS_PER_YEAR) return 0;
-
-    const int year_index = year - LUNAR_MIN_YEAR;
-    const unsigned int lunar_info = lunar_data[year_index];
-    const int leap_month = get_leap_month(lunar_info);
-
-    if (leap && month != leap_month) return 0;
-
-    const int month_index = leap && month == leap_month ? LUNAR_MAX_MONTHS : month;
-    return (lunar_info & (LUNAR_INFO_MONTH_DAY_MASK >> (month_index - 1))) ? LUNAR_DAYS_30 : LUNAR_DAYS_29;
-}
-
-int lunar_get_days_in_year(int year) {
-    if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return 0;
-
-    int total = 0;
-    for (int i = 1; i <= LUNAR_MONTHS_PER_YEAR; i++) {
-        total += lunar_days_in_month(year, i, 0);
-    }
-
-    const int leap_month = lunar_get_leap_month(year);
-    if (leap_month > 0) {
-        total += lunar_days_in_month(year, leap_month, 1);
-    }
-
-    return total;
-}

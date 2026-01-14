@@ -41,21 +41,15 @@
 #define DIRECTIONS_COUNT 8
 
 /* Lunar calendar data bit masks */
-#define LUNAR_INFO_SPRING_MONTH_MASK 0xF
-#define LUNAR_INFO_SPRING_DAY_MASK 0x1F
-#define LUNAR_INFO_LEAP_MONTH_SHIFT 21
 #define LUNAR_INFO_LEAP_MONTH_MASK 0xF
-#define LUNAR_INFO_MONTH_DAY_MASK 0x80000
+#define LUNAR_INFO_LEAP_MONTH_DAY_BIT 0x10000
 
 /* Lunar calendar constants */
-#define LUNAR_MIN_YEAR 1901
+#define LUNAR_MIN_YEAR 1900
 #define LUNAR_MAX_YEAR 2100
 #define LUNAR_MONTHS_PER_YEAR 12
 #define LUNAR_MAX_MONTHS 13
 #define LUNAR_DAYS_30 30
 #define LUNAR_DAYS_29 29
-
-/* Solar calendar constants */
-#define SOLAR_DAYS_IN_JANUARY 31
 
 #endif
